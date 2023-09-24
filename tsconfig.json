@@ -3,7 +3,15 @@
     "incremental": true,
     "target": "es2022",
     "module": "commonjs",
-    "lib": ["dom", "es2022"],
+    "lib": [
+      "dom",
+      "es2022"
+    ],
+    "paths": {
+      "type/*": [
+        "./src/type/*"
+      ],
+    },
     "jsx": "react-jsx",
     "strict": true,
     "sourceMap": true,
@@ -14,5 +22,10 @@
     "allowJs": true,
     "outDir": ".erb/dll"
   },
-  "exclude": ["test", "release/build", "release/app/dist", ".erb/dll"]
+  "exclude": [
+    "test",
+    "release/build",
+    "release/app/dist",
+    ".erb/dll"
+  ]
 }
