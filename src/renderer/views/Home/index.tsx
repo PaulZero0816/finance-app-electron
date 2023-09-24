@@ -32,6 +32,9 @@ import { Detail, Source } from 'type/index';
 import { MaterialReactTable } from 'material-react-table';
 import { type MRT_ColumnDef } from 'material-react-table';
 import { useSnackbar } from 'notistack';
+import { useNavigate } from 'react-router-dom';
+import { useFilePicker } from 'use-file-picker';
+import Papa from 'papaparse';
 
 const drawerWidth = 200;
 
@@ -86,6 +89,28 @@ const DrawerHeader = styled('div')(({ theme }) => ({
 
 export default function PersistentDrawerLeft() {
   const theme = useTheme();
+  const navigate = useNavigate();
+  const { openFilePicker, plainFiles, loading } = useFilePicker({
+    multiple: false,
+    readAs: 'DataURL', // availible formats: "Text" | "BinaryString" | "ArrayBuffer" | "DataURL"
+    // accept: '.ics,.pdf',
+    accept: ['.csv', '.xls'],
+  });
+
+  if (!loading && plainFiles && plainFiles.length > 0) {
+    const reader = new FileReader();
+
+    // Event listener on reader when the file
+    // loads, we parse it and set the data.
+    reader.onload = async ({ target }) => {
+      const csv = Papa.parse(target!.result, { header: true });
+      const parsedData = csv?.data;
+      const columns = Object.keys(parsedData[0]);
+      console.log(parsedData, columns);
+    };
+    reader.readAsText(plainFiles[0]);
+  }
+
   const [open, setOpen] = React.useState(false);
   const [newValue, setNewValue] = React.useState<Partial<Detail> | null>(null);
   const source = window.electron.store.get('source') as Source[];
@@ -191,7 +216,11 @@ export default function PersistentDrawerLeft() {
         <Divider />
         <List>
           <ListItem key={'主页'} disablePadding>
-            <ListItemButton>
+            <ListItemButton
+              onClick={() => {
+                navigate('/');
+              }}
+            >
               <ListItemIcon>
                 <DashboardCustomizeIcon />
               </ListItemIcon>
@@ -199,7 +228,11 @@ export default function PersistentDrawerLeft() {
             </ListItemButton>
           </ListItem>
           <ListItem key={'账号管理'} disablePadding>
-            <ListItemButton>
+            <ListItemButton
+              onClick={() => {
+                navigate('/account-management');
+              }}
+            >
               <ListItemIcon>
                 <AccountBalanceWalletIcon />
               </ListItemIcon>
@@ -231,6 +264,9 @@ export default function PersistentDrawerLeft() {
           }}
           helperText="选择账号"
         >
+          <option key={undefined} value={undefined}>
+            {`请选择账号`}
+          </option>
           {source.map((option) => (
             <option key={option.id} value={option.id}>
               {`${option.name} ${option.bankName}`}
@@ -304,19 +340,26 @@ export default function PersistentDrawerLeft() {
             <Button
               variant="contained"
               onClick={() => {
-                if(!newValue) {
-                  return 
+                if (!newValue) {
+                  return;
                 }
-                if (!newValue?.source) {
-                  enqueueSnackbar('来源必须选择', { key: 'error' });
+                if (!newValue.source) {
+                  enqueueSnackbar('来源必须选择', { variant: 'error' });
+                  return;
                 }
-                if (!newValue?.diffValue) {
-                  enqueueSnackbar('金额必须填写', { key: 'error' });
+                if (!newValue.diffValue) {
+                  enqueueSnackbar('金额必须填写', { variant: 'error' });
+                  return;
                 }
-                if (!newValue?.transactionTime) {
-                  enqueueSnackbar('交易时间必须填写', { key: 'error' });
+                if (!newValue.transactionTime) {
+                  enqueueSnackbar('交易时间必须填写', { variant: 'error' });
+                  return;
                 }
-                newValue.createdAt = 
+                const now = new Date();
+                newValue.createdAt = now.toISOString();
+                window.electron.store.set('details', [newValue, ...details]);
+                enqueueSnackbar('创建成功', { variant: 'success' });
+                setNewValue(null);
               }}
             >
               添加
@@ -424,6 +467,9 @@ export default function PersistentDrawerLeft() {
               variant="outlined"
               startIcon={<QueueIcon />}
               style={{ marginRight: '10px' }}
+              onClick={() => {
+                openFilePicker();
+              }}
             >
               批量导入文件
             </Button>
